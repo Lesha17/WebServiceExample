@@ -10,7 +10,7 @@
 
         <init-param>
             <param-name>com.sun.jersey.config.property.packages</param-name>
-            <param-value>com.example.webservice</param-value>
+            <param-value>com.example.webservice.controller</param-value>
         </init-param>
 
         <init-param>
