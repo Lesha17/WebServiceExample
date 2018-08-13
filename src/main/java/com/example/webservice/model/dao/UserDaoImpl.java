@@ -10,13 +10,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
 
-public class UserDaoImpl implements UserDao{
+public class UserDaoImpl implements UserDao {
 
     private static final String FIND_USER_BY_LOGIN_SQL = "SELECT (login) FROM users where login = ?;";
     private static final String CREATE_USER_SQL = "INSERT INTO users (login, password, balance) VALUES (?, ?, ?);";
-    private static final String CHECK_PASSWORD_SQL = "SELECT CASE WHEN password = ? THEN 1 ELSE 0 END password_correct\n" +
-            "    FROM users\n" +
-            "    WHERE login = ?;";
+    private static final String CHECK_PASSWORD_SQL =
+            "SELECT CASE WHEN password = ? THEN 1 ELSE 0 END password_correct FROM users WHERE login = ?;";
     private static final String GET_BALANCE_SQL = "SELECT (balance) FROM users WHERE login = ?";
 
     private final ConnectionFactory connectionFactory;
@@ -28,7 +27,7 @@ public class UserDaoImpl implements UserDao{
 
     @Override
     public void createIfNotExists(User user) throws ServerException, UserAlreadyExistsException {
-        try(Connection connection = connectionFactory.getConnection()) {
+        try (Connection connection = connectionFactory.getConnection()) {
 
             connection.setAutoCommit(false);
             connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
@@ -57,12 +56,11 @@ public class UserDaoImpl implements UserDao{
                     checkUserNotExist(findUserStatement);
                     throw e;
                 }
-            }
-            finally {
-                if(findUserStatement != null) {
+            } finally {
+                if (findUserStatement != null) {
                     findUserStatement.close();
                 }
-                if(createUserStatement != null) {
+                if (createUserStatement != null) {
                     createUserStatement.close();
                 }
             }
@@ -73,7 +71,7 @@ public class UserDaoImpl implements UserDao{
 
     @Override
     public double checkPasswordAnGetBalance(String login, String password) throws ServerException, IncorrectPasswordException, UserNotExistsException {
-        try(Connection connection = connectionFactory.getConnection()) {
+        try (Connection connection = connectionFactory.getConnection()) {
 
             PreparedStatement checkPasswordStatement = null;
             PreparedStatement getBalanceStatement = null;
@@ -84,12 +82,12 @@ public class UserDaoImpl implements UserDao{
                 checkPasswordStatement.setString(2, login);
 
                 ResultSet checkPasswordResult = checkPasswordStatement.executeQuery();
-                if(checkPasswordResult.next()) {
-                    if(checkPasswordResult.getInt(1) == 1) {
+                if (checkPasswordResult.next()) {
+                    if (checkPasswordResult.getInt(1) == 1) {
                         getBalanceStatement = connection.prepareStatement(GET_BALANCE_SQL);
                         getBalanceStatement.setString(1, login);
                         ResultSet getBalanceResult = getBalanceStatement.executeQuery();
-                        if(getBalanceResult.next()) {
+                        if (getBalanceResult.next()) {
                             return getBalanceResult.getDouble(1);
                         } else {
                             throw new AssertionError();
@@ -101,10 +99,10 @@ public class UserDaoImpl implements UserDao{
                     throw new UserNotExistsException();
                 }
             } finally {
-                if(checkPasswordStatement != null) {
+                if (checkPasswordStatement != null) {
                     checkPasswordStatement.close();
                 }
-                if(getBalanceStatement != null) {
+                if (getBalanceStatement != null) {
                     getBalanceStatement.close();
                 }
             }
@@ -141,7 +139,7 @@ public class UserDaoImpl implements UserDao{
 
     private void checkUserNotExist(PreparedStatement findUserStatement) throws SQLException, UserAlreadyExistsException {
         ResultSet queryResult = findUserStatement.executeQuery();
-        if(queryResult.next()) {
+        if (queryResult.next()) {
             throw new UserAlreadyExistsException();
         }
     }

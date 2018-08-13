@@ -1,11 +1,14 @@
 package com.example.webservice.controller;
 
+import com.example.webservice.model.dao.ServerException;
 import com.example.webservice.model.dao.UserDao;
 import com.example.webservice.model.entities.User;
-import com.example.webservice.model.dao.ServerException;
 
 import javax.inject.Inject;
-import javax.ws.rs.*;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.HashMap;
@@ -14,17 +17,18 @@ import java.util.Map;
 @Path("/user")
 public class UserController {
 
-    public static int USER_ALREADY_EXISTS_CODE = 1;
-    public static int USER_NOT_EXISTS_CODE = 3;
-    public static int INCORRECT_PASSWORD_CODE = 4;
-
     public static final String TYPE = "type";
     public static final String LOGIN = "login";
     public static final String PASSWORD = "password";
+
     public static final String BALANCE = "balance";
 
     public static final String CREATE_TYPE = "create";
     public static final String GET_BALANCE_TYPE = "get-balance";
+
+    public static int USER_ALREADY_EXISTS_CODE = 1;
+    public static int USER_NOT_EXISTS_CODE = 3;
+    public static int INCORRECT_PASSWORD_CODE = 4;
 
     @Inject
     private UserDao userDao;
@@ -32,8 +36,7 @@ public class UserController {
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response processRequest(Map<String, String> requestData)
-    {
+    public Response processRequest(Map<String, String> requestData) {
         String type = requestData.get(TYPE);
         try {
             if (CREATE_TYPE.equals(type)) {
@@ -49,8 +52,7 @@ public class UserController {
         }
     }
 
-    private Response processCreateUserRequest(Map<String, String> requestData) throws ServerException
-    {
+    private Response processCreateUserRequest(Map<String, String> requestData) throws ServerException {
         String login = requestData.get(LOGIN);
         String password = requestData.get(PASSWORD);
 
@@ -64,8 +66,7 @@ public class UserController {
         return createOKResponse(responseContent);
     }
 
-    private Response processGetBalanceRequest(Map<String, String> requestData) throws ServerException
-    {
+    private Response processGetBalanceRequest(Map<String, String> requestData) throws ServerException {
         String login = requestData.get(LOGIN);
         String password = requestData.get(PASSWORD);
 

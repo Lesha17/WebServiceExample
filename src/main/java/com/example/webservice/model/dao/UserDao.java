@@ -1,9 +1,6 @@
 package com.example.webservice.model.dao;
 
 import com.example.webservice.model.entities.User;
-import com.sun.tools.internal.xjc.reader.xmlschema.bindinfo.BIConversion;
-
-import java.util.Map;
 
 public interface UserDao extends GenericDao<User, Long> {
 
@@ -12,9 +9,12 @@ public interface UserDao extends GenericDao<User, Long> {
     public double checkPasswordAnGetBalance(String login, String password)
             throws UserNotExistsException, IncorrectPasswordException, ServerException;
 
-    public static class UserAlreadyExistsException extends Exception {};
+    public static class UserAlreadyExistsException extends Exception {
+    }
 
-    public class UserNotExistsException extends Exception {}
+    public class UserNotExistsException extends Exception {
+    }
 
-    public class IncorrectPasswordException extends Exception {}
+    public class IncorrectPasswordException extends Exception {
+    }
 }
