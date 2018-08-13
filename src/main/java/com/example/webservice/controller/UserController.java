@@ -36,16 +36,21 @@ public class UserController {
     public Response processRequest(Map<String, String> requestData)
     {
         String type = requestData.get(TYPE);
-        if(CREATE_TYPE.equals(type)){
-            return processCreateUserRequest(requestData);
-        } else if(GET_BALANCE_TYPE.equals(type)) {
-            return processGetBalanceRequest(requestData);
-        } else {
-            throw new UnsupportedOperationException("Incorrect request");
+        try {
+            if (CREATE_TYPE.equals(type)) {
+                return processCreateUserRequest(requestData);
+            } else if (GET_BALANCE_TYPE.equals(type)) {
+                return processGetBalanceRequest(requestData);
+            } else {
+                throw new UnsupportedOperationException("Incorrect request");
+            }
+        } catch (ServerException e) {
+            e.printStackTrace();
+            return new Response(SERVER_ERROR_CODE);
         }
     }
 
-    private Response processCreateUserRequest(Map<String, String> requestData)
+    private Response processCreateUserRequest(Map<String, String> requestData) throws ServerException
     {
         String login = requestData.get(LOGIN);
         String password = requestData.get(PASSWORD);
@@ -55,12 +60,10 @@ public class UserController {
             return new Response(SUCCESS_CODE);
         } catch (UserDao.UserAlreadyExistsException e) {
             return new Response(USER_ALREADY_EXISTS_CODE);
-        } catch (ServerException e) {
-            return new Response(SERVER_ERROR_CODE);
         }
     }
 
-    private Response processGetBalanceRequest(Map<String, String> requestData)
+    private Response processGetBalanceRequest(Map<String, String> requestData) throws ServerException
     {
         String login = requestData.get(LOGIN);
         String password = requestData.get(PASSWORD);
@@ -74,8 +77,6 @@ public class UserController {
             return new Response(USER_NOT_EXISTS_CODE);
         } catch (UserDao.IncorrectPasswordException e) {
             return  new Response(INCORRECT_PASSWORD_CODE);
-        } catch (ServerException e) {
-            return new Response(SERVER_ERROR_CODE);
         }
     }
 }

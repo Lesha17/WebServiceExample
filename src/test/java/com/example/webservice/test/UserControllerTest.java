@@ -6,6 +6,8 @@ import com.example.webservice.controller.UserController;
 import org.glassfish.jersey.jackson.JacksonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.JerseyTest;
+import org.h2.tools.RunScript;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -13,15 +15,44 @@ import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.Application;
 import javax.ws.rs.core.MediaType;
 import java.beans.Transient;
+import java.io.FileReader;
+import java.io.StringReader;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
 public class UserControllerTest extends JerseyTest {
+
+    private Connection testConnection;
+    private Connection connectionProxy;
+
     @Override
     protected Application configure() {
         ResourceConfig config = new ResourceConfig(UserController.class, JacksonFeature.class);
-        config.register(new ApplicationBinder());
+        config.register(new TestBinder(() -> connectionProxy));
         return config;
+    }
+
+    @Override
+    public void setUp() throws Exception {
+        super.setUp();
+
+        this.testConnection = createConnection();
+        this.connectionProxy = getConnectionProxy(testConnection);
+
+        RunScript.execute(connectionProxy, new FileReader(getClass().getResource("/sql/createtable/users.sql").getFile()));
+    }
+
+    @After
+    public void shutdown() throws Exception {
+        RunScript.execute(connectionProxy, new StringReader("DROP TABLE users"));
+
+        testConnection.close();
     }
 
     @Test
@@ -70,7 +101,6 @@ public class UserControllerTest extends JerseyTest {
 
         Object balance = response.getExtras().get(UserController.BALANCE);
         Assert.assertNotNull(balance);
-        System.out.println(balance.getClass());
     }
 
     private void checkGetBalanceReturnsUserNotExists(String login, String password) {
@@ -100,5 +130,24 @@ public class UserControllerTest extends JerseyTest {
         Entity requestEntity = Entity.entity(request, MediaType.APPLICATION_JSON);
         return target("user").request().post(requestEntity, Response.class);
     }
+
+    private Connection createConnection() throws ClassNotFoundException, SQLException {
+        Class.forName("org.h2.Driver");
+        return  DriverManager.getConnection("jdbc:h2:mem:default",null, null);
+    }
+
+    private Connection getConnectionProxy(Connection connection) {
+        return (Connection) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{Connection.class}, new InvocationHandler() {
+            @Override
+            public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+                if(method.getName().equals("close") && method.getParameterCount() == 0) {
+                    return null;
+                } else {
+                    return method.invoke(connection, args);
+                }
+            }
+        });
+    }
+
 
 }
