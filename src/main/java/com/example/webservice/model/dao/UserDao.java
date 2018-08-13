@@ -7,7 +7,14 @@ import java.util.Map;
 
 public interface UserDao extends GenericDao<User, Long> {
 
-    public Long getByLogin(String login);
+    public void createIfNotExists(User user) throws UserAlreadyExistsException, ServerException;
 
-    public boolean checkPassword(Long key, String password);
+    public double checkPasswordAnGetBalance(String login, String password)
+            throws UserNotExistsException, IncorrectPasswordException, ServerException;
+
+    public static class UserAlreadyExistsException extends Exception {};
+
+    public class UserNotExistsException extends Exception {}
+
+    public class IncorrectPasswordException extends Exception {}
 }

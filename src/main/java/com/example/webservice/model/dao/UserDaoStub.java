@@ -2,6 +2,7 @@ package com.example.webservice.model.dao;
 
 import com.example.webservice.model.entities.User;
 
+import java.sql.SQLException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -46,18 +47,31 @@ public class UserDaoStub implements UserDao {
     }
 
     @Override
-    public Long getByLogin(String login) {
-        return users.entrySet().stream().filter(e -> login.equals(e.getValue().getLogin())).map(Map.Entry::getKey)
-                .findAny().orElse(null);
+    public void createIfNotExists(User user) throws UserAlreadyExistsException {
+        User foundUser = findUserByLogin(user.getLogin());
+        if(foundUser == null) {
+            Long key = generateKey();
+            users.put(key, user);
+        } else {
+            throw new UserAlreadyExistsException();
+        }
     }
 
     @Override
-    public boolean checkPassword(Long key, String password) {
-        User user = read(key);
+    public double checkPasswordAnGetBalance(String login, String password) throws UserNotExistsException, IncorrectPasswordException {
+        User user = findUserByLogin(login);
         if(user == null) {
-            throw new IllegalArgumentException();
+            throw new UserNotExistsException();
         }
-        return password.equals(user.getPassword());
+        if(!user.getPassword().equals(password)) {
+            throw new IncorrectPasswordException();
+        }
+        return user.getBalance();
+    }
+
+    private User findUserByLogin(String login) {
+        return users.values().stream().filter(user -> login.equals(user.getLogin()))
+                .findAny().orElse(null);
     }
 
     private long generateKey() {

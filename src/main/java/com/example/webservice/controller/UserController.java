@@ -1,11 +1,8 @@
 package com.example.webservice.controller;
 
-import com.example.webservice.model.dao.UserDaoStub;
-import com.example.webservice.model.operations.CreateUserOperation;
-import com.example.webservice.model.operations.GetBalanceOperation;
-import com.example.webservice.model.operations.ServerException;
-import com.example.webservice.model.operations.impl.CreateUserOperationImpl;
-import com.example.webservice.model.operations.impl.GetBalanceOperationImpl;
+import com.example.webservice.model.dao.UserDao;
+import com.example.webservice.model.entities.User;
+import com.example.webservice.model.dao.ServerException;
 
 import javax.inject.Inject;
 import javax.ws.rs.*;
@@ -31,10 +28,7 @@ public class UserController {
     public static final String GET_BALANCE_TYPE = "get-balance";
 
     @Inject
-    private CreateUserOperation createUserOperation;
-
-    @Inject
-    private GetBalanceOperation getBalanceOperation;
+    private UserDao userDao;
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
@@ -57,9 +51,9 @@ public class UserController {
         String password = requestData.get(PASSWORD);
 
         try {
-            createUserOperation.createUser(login, password);
+            userDao.createIfNotExists(new User(login, password));
             return new Response(SUCCESS_CODE);
-        } catch (CreateUserOperation.UserAlreadyExistsException e) {
+        } catch (UserDao.UserAlreadyExistsException e) {
             return new Response(USER_ALREADY_EXISTS_CODE);
         } catch (ServerException e) {
             return new Response(SERVER_ERROR_CODE);
@@ -72,13 +66,13 @@ public class UserController {
         String password = requestData.get(PASSWORD);
 
         try {
-            double balance = getBalanceOperation.getBalance(login, password);
+            double balance = userDao.checkPasswordAnGetBalance(login, password);
             Map<String, Object> extras = new HashMap<>();
             extras.put(BALANCE, balance);
             return new Response(SUCCESS_CODE, extras);
-        } catch (GetBalanceOperation.UserNotExistsException e) {
+        } catch (UserDao.UserNotExistsException e) {
             return new Response(USER_NOT_EXISTS_CODE);
-        } catch (GetBalanceOperation.IncorrectPasswordException e) {
+        } catch (UserDao.IncorrectPasswordException e) {
             return  new Response(INCORRECT_PASSWORD_CODE);
         } catch (ServerException e) {
             return new Response(SERVER_ERROR_CODE);
