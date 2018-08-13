@@ -21,13 +21,8 @@ import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
 
 public class UserControllerTest extends JerseyTest {
 
@@ -86,18 +81,19 @@ public class UserControllerTest extends JerseyTest {
 
     @Test
     public void testCreateUserInManyThreads() throws Exception {
-        int threadsCount = 10;
+        int threadsCount = 100;
         int waitingTimeInSeconds = 60;
 
         String userName = "usr1234";
         String password = "1234";
 
-        ThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(threadsCount);
+        ExecutorService executor = Executors.newFixedThreadPool(threadsCount);
 
-        Collection<ResponseContent> results = new ArrayList<>();
+        Collection<ResponseContent> results = Collections.synchronizedCollection(new ArrayList<>());
         for(int i = 0; i < threadsCount; ++i) {
             executor.submit(() -> results.add(createUser(userName, password)));
         }
+        executor.shutdown();
         executor.awaitTermination(waitingTimeInSeconds, TimeUnit.SECONDS);
 
         Assert.assertEquals("Not all results collected", threadsCount, results.size());
