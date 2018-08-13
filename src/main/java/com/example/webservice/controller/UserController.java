@@ -7,6 +7,7 @@ import com.example.webservice.model.operations.ServerException;
 import com.example.webservice.model.operations.impl.CreateUserOperationImpl;
 import com.example.webservice.model.operations.impl.GetBalanceOperationImpl;
 
+import javax.inject.Inject;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.util.HashMap;
@@ -29,8 +30,11 @@ public class UserController {
     public static final String CREATE_TYPE = "create";
     public static final String GET_BALANCE_TYPE = "get-balance";
 
-    private CreateUserOperation createUserOperation = new CreateUserOperationImpl(UserDaoStub.INSTANCE);
-    private GetBalanceOperation getBalanceOperation = new GetBalanceOperationImpl(UserDaoStub.INSTANCE);
+    @Inject
+    private CreateUserOperation createUserOperation;
+
+    @Inject
+    private GetBalanceOperation getBalanceOperation;
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)

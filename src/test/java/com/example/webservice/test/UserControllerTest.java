@@ -1,5 +1,6 @@
 package com.example.webservice.test;
 
+import com.example.webservice.ApplicationBinder;
 import com.example.webservice.controller.Response;
 import com.example.webservice.controller.UserController;
 import org.glassfish.jersey.jackson.JacksonFeature;
@@ -18,7 +19,9 @@ import java.util.Map;
 public class UserControllerTest extends JerseyTest {
     @Override
     protected Application configure() {
-        return new ResourceConfig(UserController.class, JacksonFeature.class);
+        ResourceConfig config = new ResourceConfig(UserController.class, JacksonFeature.class);
+        config.register(new ApplicationBinder());
+        return config;
     }
 
     @Test

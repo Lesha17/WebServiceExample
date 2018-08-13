@@ -6,10 +6,13 @@ import com.example.webservice.model.entities.User;
 import com.example.webservice.model.operations.GetBalanceOperation;
 import com.example.webservice.model.operations.ServerException;
 
+import javax.inject.Inject;
+
 public class GetBalanceOperationImpl implements GetBalanceOperation {
 
     private final UserDao userDao;
 
+    @Inject
     public GetBalanceOperationImpl(UserDao userDao) {
         this.userDao = userDao;
     }
