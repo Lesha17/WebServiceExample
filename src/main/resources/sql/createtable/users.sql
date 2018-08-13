@@ -6,4 +6,3 @@ CREATE TABLE public.users
     balance DECIMAL NOT NULL
 );
 CREATE UNIQUE INDEX users_login_uindex ON public.users (login);
-/*CREATE EXTENSION pgcrypto;*/
