@@ -23,18 +23,24 @@ import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class UserControllerTest extends JerseyTest {
 
     private Connection testConnection;
-    private Connection connectionProxy;
 
     @Override
     protected Application configure() {
         ResourceConfig config = new ResourceConfig(UserController.class, JacksonFeature.class);
-        config.register(new TestBinder(() -> connectionProxy));
+        config.register(new TestBinder(() -> createConnection()));
         return config;
     }
 
@@ -42,15 +48,15 @@ public class UserControllerTest extends JerseyTest {
     public void setUp() throws Exception {
         super.setUp();
 
+        Class.forName("org.h2.Driver");
         this.testConnection = createConnection();
-        this.connectionProxy = getConnectionProxy(testConnection);
 
-        RunScript.execute(connectionProxy, new FileReader(getClass().getResource("/sql/createtable/users.sql").getFile()));
+        RunScript.execute(testConnection, new FileReader(getClass().getResource("/sql/createtable/users.sql").getFile()));
     }
 
     @After
     public void shutdown() throws Exception {
-        RunScript.execute(connectionProxy, new StringReader("DROP TABLE users"));
+        RunScript.execute(testConnection, new StringReader("DROP TABLE users"));
 
         testConnection.close();
     }
@@ -80,7 +86,35 @@ public class UserControllerTest extends JerseyTest {
         checkGetBalanceSuccess(login, password);
         checkGetBalanceReturnsUserNotExists(login + "i", password);
         checkGetBalanceReturnsIncorrectPassword(login, password + "i");
+    }
 
+    @Test
+    public void testCreateUserInManyThreads() throws Exception {
+        int threadsCount = 20;
+        int waitingTimeInSeconds = 25;
+
+        String userName = "usr1234";
+        String password = "1234";
+
+        ThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(threadsCount);
+
+        Collection<Response> results = new ArrayList<>();
+        for(int i = 0; i < threadsCount; ++i) {
+            executor.submit(() -> results.add(createUser(userName, password)));
+        }
+        executor.awaitTermination(waitingTimeInSeconds, TimeUnit.SECONDS);
+
+        Assert.assertEquals("Not all results collected", threadsCount, results.size());
+
+        long successCount = results.stream()
+                .filter(response -> response.getResult() == UserController.SUCCESS_CODE)
+                .count();
+        long userAlreadyExistsCount = results.stream()
+                .filter(response -> response.getResult() == UserController.USER_ALREADY_EXISTS_CODE)
+                .count();
+
+        Assert.assertEquals(1, successCount);
+        Assert.assertEquals(threadsCount - 1, userAlreadyExistsCount);
     }
 
     private Response createUser(String login, String password) {
@@ -131,8 +165,7 @@ public class UserControllerTest extends JerseyTest {
         return target("user").request().post(requestEntity, Response.class);
     }
 
-    private Connection createConnection() throws ClassNotFoundException, SQLException {
-        Class.forName("org.h2.Driver");
+    private Connection createConnection() throws SQLException {
         return  DriverManager.getConnection("jdbc:h2:mem:default",null, null);
     }
 

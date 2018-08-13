@@ -30,25 +30,41 @@ public class UserDaoImpl implements UserDao{
     public void createIfNotExists(User user) throws ServerException, UserAlreadyExistsException {
         try(Connection connection = connectionFactory.getConnection()) {
 
-            PreparedStatement findUserStatement = connection.prepareStatement(FIND_USER_BY_LOGIN_SQL);
-            PreparedStatement createUserStatement = connection.prepareStatement(CREATE_USER_SQL);
+            connection.setAutoCommit(false);
+            connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+
+            PreparedStatement findUserStatement = null;
+            PreparedStatement createUserStatement = null;
 
             try {
+                findUserStatement = connection.prepareStatement(FIND_USER_BY_LOGIN_SQL);
                 findUserStatement.setString(1, user.getLogin());
-                ResultSet queryResult = findUserStatement.executeQuery();
 
-                if(queryResult.next()) {
-                   throw new UserAlreadyExistsException();
-                }
+                checkUserNotExist(findUserStatement);
 
+                createUserStatement = connection.prepareStatement(CREATE_USER_SQL);
                 createUserStatement.setString(1, user.getLogin());
                 createUserStatement.setString(2, user.getPassword());
                 createUserStatement.setDouble(3, user.getBalance());
 
-                createUserStatement.executeUpdate();
-            } finally {
-                findUserStatement.close();
-                createUserStatement.close();
+                try {
+                    createUserStatement.executeUpdate();
+
+                    connection.commit();
+                } catch (SQLException e) {
+                    connection.rollback();
+
+                    checkUserNotExist(findUserStatement);
+                    throw e;
+                }
+            }
+            finally {
+                if(findUserStatement != null) {
+                    findUserStatement.close();
+                }
+                if(createUserStatement != null) {
+                    createUserStatement.close();
+                }
             }
         } catch (SQLException e) {
             throw new ServerException(e);
@@ -58,16 +74,19 @@ public class UserDaoImpl implements UserDao{
     @Override
     public double checkPasswordAnGetBalance(String login, String password) throws ServerException, IncorrectPasswordException, UserNotExistsException {
         try(Connection connection = connectionFactory.getConnection()) {
-            PreparedStatement checkPasswordStatement = connection.prepareStatement(CHECK_PASSWORD_SQL);
-            PreparedStatement getBalanceStatement = connection.prepareStatement(GET_BALANCE_SQL);
+
+            PreparedStatement checkPasswordStatement = null;
+            PreparedStatement getBalanceStatement = null;
 
             try {
+                checkPasswordStatement = connection.prepareStatement(CHECK_PASSWORD_SQL);
                 checkPasswordStatement.setString(1, password);
                 checkPasswordStatement.setString(2, login);
 
                 ResultSet checkPasswordResult = checkPasswordStatement.executeQuery();
                 if(checkPasswordResult.next()) {
                     if(checkPasswordResult.getInt(1) == 1) {
+                        getBalanceStatement = connection.prepareStatement(GET_BALANCE_SQL);
                         getBalanceStatement.setString(1, login);
                         ResultSet getBalanceResult = getBalanceStatement.executeQuery();
                         if(getBalanceResult.next()) {
@@ -82,8 +101,12 @@ public class UserDaoImpl implements UserDao{
                     throw new UserNotExistsException();
                 }
             } finally {
-                checkPasswordStatement.close();
-                getBalanceStatement.close();
+                if(checkPasswordStatement != null) {
+                    checkPasswordStatement.close();
+                }
+                if(getBalanceStatement != null) {
+                    getBalanceStatement.close();
+                }
             }
 
         } catch (SQLException e) {
@@ -114,5 +137,12 @@ public class UserDaoImpl implements UserDao{
     @Override
     public Map<Long, User> getAll() {
         throw new UnsupportedOperationException("Not implemented yet");
+    }
+
+    private void checkUserNotExist(PreparedStatement findUserStatement) throws SQLException, UserAlreadyExistsException {
+        ResultSet queryResult = findUserStatement.executeQuery();
+        if(queryResult.next()) {
+            throw new UserAlreadyExistsException();
+        }
     }
 }
