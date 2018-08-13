@@ -1,7 +1,6 @@
 package com.example.webservice.test;
 
-import com.example.webservice.ApplicationBinder;
-import com.example.webservice.controller.Response;
+import com.example.webservice.controller.ResponseContent;
 import com.example.webservice.controller.UserController;
 import org.glassfish.jersey.jackson.JacksonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -14,7 +13,6 @@ import org.junit.Test;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.Application;
 import javax.ws.rs.core.MediaType;
-import java.beans.Transient;
 import java.io.FileReader;
 import java.io.StringReader;
 import java.lang.reflect.InvocationHandler;
@@ -27,11 +25,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 public class UserControllerTest extends JerseyTest {
 
@@ -67,10 +63,10 @@ public class UserControllerTest extends JerseyTest {
         String login = "12345";
         String password = "pwd123";
 
-        Response response1 = createUser(login, password);
-        Assert.assertEquals(UserController.SUCCESS_CODE, response1.getResult());
+        ResponseContent response1 = createUser(login, password);
+        Assert.assertEquals(ResponseContent.SUCCESS_CODE, response1.getResult());
 
-        Response response2 = createUser(login, password);
+        ResponseContent response2 = createUser(login, password);
         Assert.assertEquals(UserController.USER_ALREADY_EXISTS_CODE, response2.getResult());
     }
 
@@ -80,8 +76,8 @@ public class UserControllerTest extends JerseyTest {
         String login = "userWithBalance";
         String password = "1234";
 
-        Response createUserResponse = createUser(login, password);
-        Assert.assertEquals(UserController.SUCCESS_CODE, createUserResponse.getResult());
+        ResponseContent createUserResponse = createUser(login, password);
+        Assert.assertEquals(ResponseContent.SUCCESS_CODE, createUserResponse.getResult());
 
         checkGetBalanceSuccess(login, password);
         checkGetBalanceReturnsUserNotExists(login + "i", password);
@@ -90,15 +86,15 @@ public class UserControllerTest extends JerseyTest {
 
     @Test
     public void testCreateUserInManyThreads() throws Exception {
-        int threadsCount = 20;
-        int waitingTimeInSeconds = 25;
+        int threadsCount = 10;
+        int waitingTimeInSeconds = 60;
 
         String userName = "usr1234";
         String password = "1234";
 
         ThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(threadsCount);
 
-        Collection<Response> results = new ArrayList<>();
+        Collection<ResponseContent> results = new ArrayList<>();
         for(int i = 0; i < threadsCount; ++i) {
             executor.submit(() -> results.add(createUser(userName, password)));
         }
@@ -107,7 +103,7 @@ public class UserControllerTest extends JerseyTest {
         Assert.assertEquals("Not all results collected", threadsCount, results.size());
 
         long successCount = results.stream()
-                .filter(response -> response.getResult() == UserController.SUCCESS_CODE)
+                .filter(response -> response.getResult() == ResponseContent.SUCCESS_CODE)
                 .count();
         long userAlreadyExistsCount = results.stream()
                 .filter(response -> response.getResult() == UserController.USER_ALREADY_EXISTS_CODE)
@@ -117,7 +113,7 @@ public class UserControllerTest extends JerseyTest {
         Assert.assertEquals(threadsCount - 1, userAlreadyExistsCount);
     }
 
-    private Response createUser(String login, String password) {
+    private ResponseContent createUser(String login, String password) {
         Map<String, String> createUserRequest = new HashMap<>();
 
         createUserRequest.put(UserController.TYPE, UserController.CREATE_TYPE);
@@ -128,9 +124,9 @@ public class UserControllerTest extends JerseyTest {
     }
 
     private void checkGetBalanceSuccess(String login, String password) {
-        Response response = getBalance(login, password);
+        ResponseContent response = getBalance(login, password);
 
-        Assert.assertEquals(UserController.SUCCESS_CODE, response.getResult());
+        Assert.assertEquals(ResponseContent.SUCCESS_CODE, response.getResult());
         Assert.assertNotNull(response.getExtras());
 
         Object balance = response.getExtras().get(UserController.BALANCE);
@@ -138,18 +134,18 @@ public class UserControllerTest extends JerseyTest {
     }
 
     private void checkGetBalanceReturnsUserNotExists(String login, String password) {
-        Response response = getBalance(login, password);
+        ResponseContent response = getBalance(login, password);
 
         Assert.assertEquals(UserController.USER_NOT_EXISTS_CODE, response.getResult());
     }
 
     private void checkGetBalanceReturnsIncorrectPassword(String login, String password) {
-        Response response = getBalance(login, password);
+        ResponseContent response = getBalance(login, password);
 
         Assert.assertEquals(UserController.INCORRECT_PASSWORD_CODE, response.getResult());
     }
 
-    private Response getBalance(String login, String password) {
+    private ResponseContent getBalance(String login, String password) {
         Map<String, String> getBalanceRequest = new HashMap<>();
 
         getBalanceRequest.put(UserController.TYPE, UserController.GET_BALANCE_TYPE);
@@ -160,9 +156,9 @@ public class UserControllerTest extends JerseyTest {
     }
 
 
-    private Response postRequest(Map<String, String> request) {
+    private ResponseContent postRequest(Map<String, String> request) {
         Entity requestEntity = Entity.entity(request, MediaType.APPLICATION_JSON);
-        return target("user").request().post(requestEntity, Response.class);
+        return target("user").request().post(requestEntity, ResponseContent.class);
     }
 
     private Connection createConnection() throws SQLException {

@@ -7,15 +7,14 @@ import com.example.webservice.model.dao.ServerException;
 import javax.inject.Inject;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.util.HashMap;
 import java.util.Map;
 
 @Path("/user")
 public class UserController {
 
-    public static int SUCCESS_CODE = 0;
     public static int USER_ALREADY_EXISTS_CODE = 1;
-    public static int SERVER_ERROR_CODE = 2;
     public static int USER_NOT_EXISTS_CODE = 3;
     public static int INCORRECT_PASSWORD_CODE = 4;
 
@@ -42,11 +41,11 @@ public class UserController {
             } else if (GET_BALANCE_TYPE.equals(type)) {
                 return processGetBalanceRequest(requestData);
             } else {
-                throw new UnsupportedOperationException("Incorrect request");
+                return processUnsupportedRequestType(type);
             }
         } catch (ServerException e) {
             e.printStackTrace();
-            return new Response(SERVER_ERROR_CODE);
+            return processServerException(e);
         }
     }
 
@@ -55,12 +54,14 @@ public class UserController {
         String login = requestData.get(LOGIN);
         String password = requestData.get(PASSWORD);
 
+        ResponseContent responseContent;
         try {
             userDao.createIfNotExists(new User(login, password));
-            return new Response(SUCCESS_CODE);
+            responseContent = new ResponseContent(ResponseContent.SUCCESS_CODE);
         } catch (UserDao.UserAlreadyExistsException e) {
-            return new Response(USER_ALREADY_EXISTS_CODE);
+            responseContent = new ResponseContent(USER_ALREADY_EXISTS_CODE);
         }
+        return createOKResponse(responseContent);
     }
 
     private Response processGetBalanceRequest(Map<String, String> requestData) throws ServerException
@@ -68,15 +69,35 @@ public class UserController {
         String login = requestData.get(LOGIN);
         String password = requestData.get(PASSWORD);
 
+        ResponseContent responseContent;
         try {
             double balance = userDao.checkPasswordAnGetBalance(login, password);
             Map<String, Object> extras = new HashMap<>();
             extras.put(BALANCE, balance);
-            return new Response(SUCCESS_CODE, extras);
+            responseContent = new ResponseContent(ResponseContent.SUCCESS_CODE, extras);
         } catch (UserDao.UserNotExistsException e) {
-            return new Response(USER_NOT_EXISTS_CODE);
+            responseContent = new ResponseContent(USER_NOT_EXISTS_CODE);
         } catch (UserDao.IncorrectPasswordException e) {
-            return  new Response(INCORRECT_PASSWORD_CODE);
+            responseContent = new ResponseContent(INCORRECT_PASSWORD_CODE);
         }
+        return createOKResponse(responseContent);
+    }
+
+    private Response processUnsupportedRequestType(String requestType) {
+        return Response.status(Response.Status.BAD_REQUEST).entity("Bad request type").build();
+    }
+
+
+    private Response processServerException(ServerException e) {
+        ResponseContent responseContent = new ResponseContent(ResponseContent.SERVER_ERROR_CODE);
+        return createServerErrorResponse(responseContent);
+    }
+
+    private Response createOKResponse(ResponseContent content) {
+        return Response.status(Response.Status.OK).entity(content).build();
+    }
+
+    private Response createServerErrorResponse(ResponseContent content) {
+        return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(content).build();
     }
 }
