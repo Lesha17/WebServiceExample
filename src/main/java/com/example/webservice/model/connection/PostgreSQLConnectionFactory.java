@@ -4,6 +4,9 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
+/**
+ * Implementation of {@link ConnectionFactory} for Postgre database.
+ */
 public class PostgreSQLConnectionFactory implements ConnectionFactory {
 
     static {
