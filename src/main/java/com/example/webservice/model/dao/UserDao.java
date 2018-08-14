@@ -2,6 +2,9 @@ package com.example.webservice.model.dao;
 
 import com.example.webservice.model.entities.User;
 
+/**
+ * User Data Access Object.
+ */
 public interface UserDao extends GenericDao<User, Long> {
 
     public void createIfNotExists(User user) throws UserAlreadyExistsException, ServerException;
